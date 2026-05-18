@@ -554,11 +554,33 @@ const CategorySidebar = ({ categories, activeCategory, counts, onChange }) => (
 
 // ─── Main Module ──────────────────────────────────────────────
 export default function PersistentMemory() {
-  const [memories,        setMemories]        = useState(MOCK_MEMORY);
+  const [memories,        setMemories]        = useState([]);
   const [activeCategory,  setActiveCategory]  = useState("all");
   const [editingItem,     setEditingItem]      = useState(null);
   const [showNewModal,    setShowNewModal]     = useState(false);
   const [searchQuery,     setSearchQuery]      = useState("");
+  const [loading,         setLoading]         = useState(true);
+
+  // Load from Supabase persistent_memory table
+  useEffect(() => {
+    if (!supabase || !AGENCY_ID) { setLoading(false); return; }
+    supabase
+      .from("persistent_memory")
+      .select("*")
+      .eq("agency_id", AGENCY_ID)
+      .eq("is_active", true)
+      .order("created_at", { ascending: false })
+      .then(({ data, error }) => {
+        if (!error && data && data.length > 0) {
+          setMemories(data.map(m => ({
+            ...m,
+            title: m.title || m.category || "Memory Entry",
+            category: m.category || "business_rules",
+          })));
+        }
+        setLoading(false);
+      });
+  }, []);
 
   // Counts per category
   const counts = {
