@@ -642,7 +642,7 @@ const NotificationPrefs = () => {
 export default function AlertsNotifications({ onNavigate }) {
   const [section, setSection] = useState("overview");
   const { data: liveAlerts, loading: alertsLoading } = useSupabaseTable("alerts", AGENCY_ID, { orderBy: "created_at", ascending: false });
-  const useMockData = import.meta.env.VITE_USE_MOCK_DATA !== "false";
+  const useMockData = import.meta.env.VITE_USE_MOCK_DATA === "true";
   const [alerts, setAlerts] = useState(useMockData ? MOCK_ALERTS : []);
   useEffect(() => {
     if (liveAlerts && liveAlerts.length > 0) setAlerts(liveAlerts);
