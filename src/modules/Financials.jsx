@@ -89,11 +89,7 @@ function useFinancialsData() {
           supabase.from("gl_entries")
             .select("id, entry_date, account_name, category, debit, credit, description, payee_name, source, year, month")
             .eq("client_id", "762b2c76-1279-4bcf-a281-97e232bf3b81")
-            .order("entry_date", { ascending: false }).limit(100), credit, created_at,
-              journal_entries!inner ( entry_date, reference_number, description, source ),
-              chart_of_accounts!inner ( account_name )
-            `)
-            .order("created_at", { ascending: false }).limit(50),
+            .order("entry_date", { ascending: false }).limit(100),
 
           // Payroll runs (header)
           supabase.from("payroll_runs")
