@@ -1273,7 +1273,7 @@ const CommissionsSection = ({ commissions }) => (
 export default function HRPeople() {
   const { data: roi } = useProducerROI();
   const [section,     setSection]     = useState("overview");
-  const [applicants,  setApplicants]  = useState(MOCK_APPLICANTS);
+  const [applicants,  setApplicants]  = useState([]);
 
   const updateApplicantStage = (id, newStatus) => {
     setApplicants(prev => prev.map(a => a.id === id ? {...a, status:newStatus} : a));
@@ -1295,7 +1295,7 @@ export default function HRPeople() {
         <div>
           <div style={{ fontSize:20, fontWeight:700, color:T.slate900, letterSpacing:"-0.02em" }}>HR & People</div>
           <div style={{ fontSize:12, color:T.slate500, marginTop:3 }}>
-            {MOCK_STAFF.filter(s=>s.is_active).length} active staff · {MOCK_APPLICANTS.filter(a=>!["hired","rejected"].includes(a.status)).length} applicants in pipeline · Resume scanner active
+            {(roi?.staff||[]).filter(s=>s.is_active!==false).length} active staff · {applicants.filter(a=>!["hired","rejected"].includes(a.status)).length} applicants in pipeline · Resume scanner active
           </div>
         </div>
         <AskBtn context="Give me a complete HR review. How is my recruiting pipeline looking? Any compliance concerns with my current team? What HR actions should I take this week?" />
@@ -1311,12 +1311,12 @@ export default function HRPeople() {
       </div>
 
       {/* Section Content */}
-      {section === "overview"    && <HROverview        applicants={applicants} staff={MOCK_STAFF} onboarding={MOCK_ONBOARDING} />}
+      {section === "overview"    && <HROverview        applicants={applicants} staff={roi?.staff||[]} onboarding={[]} />}
       {section === "recruiting"  && <RecruitingPipeline applicants={applicants} onUpdate={updateApplicantStage} />}
-      {section === "staff"       && <StaffDirectory     staff={MOCK_STAFF} />}
-      {section === "onboarding"  && <OnboardingSection  onboarding={MOCK_ONBOARDING} />}
+      {section === "staff"       && <StaffDirectory     staff={roi?.staff||[]} />}
+      {section === "onboarding"  && <OnboardingSection  onboarding={[]} />}
       {section === "performance" && <PerformanceSection  roi={roi} />}
-      {section === "commissions" && <CommissionsSection  commissions={MOCK_COMMISSIONS} />}
+      {section === "commissions" && <CommissionsSection  commissions={[]} />}
     </div>
   );
 }
