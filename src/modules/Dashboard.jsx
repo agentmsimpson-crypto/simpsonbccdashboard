@@ -372,6 +372,7 @@ export default function Dashboard({ onNavigate = () => {} }) {
 
   useEffect(() => {
     async function loadDashboard() {
+      if (!supabase || !AGENCY_ID) { setLoading(false); return; }
       setLoading(true);
       try {
         // Parallel fetch all dashboard data
