@@ -150,44 +150,23 @@ const MOCK_RECIPES = [
   },
 ];
 
-const MOCK_RUN_LOG = [
-  { id:"l1",  recipe_name:"Gmail Organizer",          run_at:"Today 7:14 AM",        status:"success", records_processed:14, duration_seconds:3,  output_summary:"14 emails labeled and filed. 2 flagged for agent review." },
-  { id:"l2",  recipe_name:"Daily Briefing Email",     run_at:"Today 6:02 AM",        status:"failed",  records_processed:0,  duration_seconds:8,  output_summary:"Error: Gmail connection timeout. Authentication may need refresh.", error_message:"Gmail OAuth token expired — reconnect in Composio Settings" },
-  { id:"l3",  recipe_name:"Compliance Deadline Monitor",run_at:"Today 7:00 AM",     status:"success", records_processed:3,  duration_seconds:1,  output_summary:"3 upcoming deadlines checked. 1 alert created (E&O renewal 96 days out)." },
-  { id:"l4",  recipe_name:"Resume Scanner",           run_at:"Today 7:00 AM",        status:"success", records_processed:0,  duration_seconds:4,  output_summary:"No new resumes detected in inbox." },
-  { id:"l5",  recipe_name:"Instagram Reminder",       run_at:"Today 8:00 AM",        status:"success", records_processed:1,  duration_seconds:1,  output_summary:"1 Instagram post scheduled today — manual posting reminder alert created." },
-  { id:"l6",  recipe_name:"Facebook Post Scheduler",  run_at:"Yesterday 9:00 AM",    status:"success", records_processed:1,  duration_seconds:6,  output_summary:"1 post published successfully. post_url saved to content_calendar." },
-  { id:"l7",  recipe_name:"LinkedIn Post Scheduler",  run_at:"Yesterday 12:00 PM",   status:"success", records_processed:1,  duration_seconds:5,  output_summary:"1 post published successfully. post_url saved to content_calendar." },
-  { id:"l8",  recipe_name:"Document Importer",        run_at:"Yesterday 2:30 PM",    status:"partial", records_processed:1,  duration_seconds:22, output_summary:"1 document detected (payroll export). LLM classification: payroll_export. 2 tables updated. 1 file could not be parsed — saved to Drive for manual review." },
-  { id:"l9",  recipe_name:"Drive Filer",              run_at:"Yesterday 11:00 PM",   status:"success", records_processed:3,  duration_seconds:4,  output_summary:"3 documents filed to correct Drive folders. BCC/2026/April/ structure verified." },
-  { id:"l10", recipe_name:"Gmail Organizer",          run_at:"Yesterday 6:14 PM",    status:"success", records_processed:7,  duration_seconds:3,  output_summary:"7 emails labeled and filed." },
-  { id:"l11", recipe_name:"Gmail Organizer",          run_at:"Yesterday 5:14 PM",    status:"success", records_processed:2,  duration_seconds:2,  output_summary:"2 emails labeled and filed." },
-  { id:"l12", recipe_name:"Daily Briefing Email",     run_at:"Yesterday 6:01 AM",    status:"success", records_processed:1,  duration_seconds:11, output_summary:"Briefing email sent to jane@smithagency.com. Subject: Your Agency Snapshot — Sunday April 26." },
-];
+// Run log loaded from Supabase automation_run_log
+const MOCK_RUN_LOG = [];
 
-const MOCK_CONNECTIONS = [
-  { id:"c1", platform:"Gmail",        icon:"📧", status:"error",   connected_account:"jane@smithagency.com", last_sync:"Today 6:00 AM",    note:"OAuth token expired — needs reconnection in Composio" },
-  { id:"c2", platform:"Google Drive", icon:"📁", status:"healthy", connected_account:"jane@smithagency.com", last_sync:"Yesterday 11:00 PM", note:"All Drive operations running normally" },
-  { id:"c3", platform:"Google Calendar",icon:"📅",status:"healthy",connected_account:"jane@smithagency.com", last_sync:"Today 7:00 AM",    note:"Calendar sync active" },
-  { id:"c4", platform:"Facebook",     icon:"👥", status:"healthy", connected_account:"Smith Insurance Agency Page", last_sync:"Yesterday 9:00 AM", note:"Page posting active" },
-  { id:"c5", platform:"LinkedIn",     icon:"💼", status:"healthy", connected_account:"Jane Smith",           last_sync:"Yesterday 12:00 PM", note:"Profile posting active" },
-  { id:"c6", platform:"Instagram",    icon:"📸", status:"manual",  connected_account:"@smithinsurance",      last_sync:"N/A",              note:"Instagram requires manual daily posting — no API scheduling available" },
+// Marlon's real Composio connections (from settings table)
+const MARLON_CONNECTIONS = [
+  { id:"c1", platform:"Gmail",          icon:"📧", status:"healthy", connected_account:"agentmsimpson@gmail.com", last_sync:"Today",     note:"Active — Gmail automation running" },
+  { id:"c2", platform:"Google Drive",   icon:"📁", status:"healthy", connected_account:"agentmsimpson@gmail.com", last_sync:"Today",     note:"Active — attachment routing running" },
+  { id:"c3", platform:"Google Calendar",icon:"📅", status:"healthy", connected_account:"agentmsimpson@gmail.com", last_sync:"Today",     note:"Active" },
+  { id:"c4", platform:"GitHub",         icon:"🐙", status:"healthy", connected_account:"agentmsimpson-crypto",    last_sync:"Today",     note:"Connected — BCC repo" },
+  { id:"c5", platform:"Facebook",       icon:"👥", status:"pending", connected_account:"Not yet connected",        last_sync:"N/A",       note:"Connect to enable social posting" },
+  { id:"c6", platform:"LinkedIn",       icon:"💼", status:"pending", connected_account:"Not yet connected",        last_sync:"N/A",       note:"Connect to enable social posting" },
+  { id:"c7", platform:"Instagram",      icon:"📸", status:"manual",  connected_account:"Manual post required",     last_sync:"N/A",       note:"Instagram requires manual posting" },
 ];
+const MOCK_CONNECTIONS = MARLON_CONNECTIONS;
 
-const MOCK_BRIEFINGS = [
-  {
-    id:"b1", date:"Apr 26, 2026", sent_at:"6:01 AM", delivered:true, opened:true,
-    content:"Good morning Jane — here's your agency snapshot for Sunday April 26.\n\n💰 Revenue MTD: $48,240 (↑12% vs last year)\n🎯 AIPP: 47.5% of $142,000 target — on track\n📋 Tasks: 7 open, 2 due this week\n⚠️ Alerts: 3 active (1 critical — SF social media audit due May 11)\n📱 Social: 2 posts scheduled today (Facebook 9AM, LinkedIn 12PM) + Instagram manual needed\n🔴 Automation: Drive Filer ran successfully last night\n\nHave a great Sunday."
-  },
-  {
-    id:"b2", date:"Apr 25, 2026", sent_at:"6:01 AM", delivered:true, opened:true,
-    content:"Good morning Jane — here's your agency snapshot for Saturday April 25.\n\n💰 Revenue MTD: $48,240 (↑12% vs last year)\n🎯 AIPP: 47.5% of $142,000 target — on track\n📋 Tasks: 7 open, 2 due this week\n⚠️ Alerts: 2 active\n📱 Social: Facebook post scheduled 9AM\n✅ All automations ran successfully overnight."
-  },
-  {
-    id:"b3", date:"Apr 24, 2026", sent_at:"6:01 AM", delivered:true, opened:false,
-    content:"Good morning Jane — here's your agency snapshot for Friday April 24.\n\n💰 Revenue MTD: $42,400 (↑9% vs last year)\n🎯 AIPP: 44.2% of $142,000 target\n📋 Tasks: 8 open, 3 due this week\n⚠️ Alerts: 2 active\n📱 Social: Facebook and LinkedIn posts scheduled\n✅ All automations ran successfully overnight."
-  },
-];
+// Briefings loaded from Supabase daily_briefing_log
+const MOCK_BRIEFINGS = [];
 
 const MOCK_IMPORTS = [
   { id:"i1", date:"Apr 25, 2026", file_name:"april_payroll_export.csv",   source:"Email from Gusto",            status:"complete", groq_type:"payroll_export",  tables:["payroll_runs","payroll_detail"], records:4 },
@@ -765,7 +744,7 @@ export default function Automations() {
       {section === "runlog"      && <RunLog runLog={runLog} />}
       {section === "recipes"     && <Recipes recipes={recipes} onToggle={toggleRecipe} />}
       {section === "connections" && <Connections connections={MOCK_CONNECTIONS} />}
-      {section === "briefing"    && <DailyBriefingSection briefings={MOCK_BRIEFINGS} />}
+      {section === "briefing"    && <DailyBriefingSection briefings={briefings.length > 0 ? briefings : MOCK_BRIEFINGS} />}
       {section === "importer"    && <DocImporter imports={MOCK_IMPORTS} />}
     </div>
   );
