@@ -663,12 +663,12 @@ const AIPPSection = ({ data }) => {
             action={<AskBtn context={`AIPP ${year}: Target $${target}, Earned YTD $${earned}, Achievement ${achievement}%, Projected $${projected}, Prior Year $${priorYear}. Am I on track? What do I need to focus on?`} />}
           />
           <div style={{ fontSize: 32, fontWeight: 700, color: T.green, letterSpacing: "-0.03em", marginBottom: 4 }}>
-            {achievement}%
+            {target ? `${achievement}%` : "Target TBD"}
           </div>
           <div style={{ fontSize: 12, color: T.slate500, marginBottom: 12 }}>
-            {fmt(earned)} earned of {fmt(target)} target
+            {fmt(earned)} earned{target ? ` of ${fmt(target)} target` : " · Ask your DSL for 2026 AIPP target"}
           </div>
-          <ProgressBar value={earned} max={target} color={T.green} height={10} />
+          <ProgressBar value={target ? earned : 0} max={target || 1} color={T.green} height={10} />
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: T.slate400, marginTop: 6, marginBottom: 16 }}>
             <span>Jan {year}</span><span>Dec {year}</span>
           </div>
