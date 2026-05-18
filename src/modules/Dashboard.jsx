@@ -245,7 +245,7 @@ const TasksWidget = ({ data, onNavigate }) => {
 // ── Widget: Open Items (Claude waiting on answers) ────────────
 const OpenItemsWidget = ({ data, onNavigate }) => {
   const openItems = (data.openItems || data.persistentMemory || [])
-    .filter(m => m.memory_type === "open_item" || m.needs_followup === true || m.is_active === true || m.status === "pending_agent_input")
+    .filter(m => m.memory_type === "open_item" || m.needs_followup === true || m.status === "pending_agent_input")
     .slice(0, 5);
   return (
     <Card>
