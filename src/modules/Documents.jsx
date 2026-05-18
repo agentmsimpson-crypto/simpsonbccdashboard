@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from "react";
-import { AGENCY_ID } from "../lib/supabase.js";
+import { supabase, AGENCY_ID } from "../lib/supabase.js";
 import { useSupabaseTable } from "../lib/hooks.js";
 import EmptyState from "../components/EmptyState.jsx";
 
@@ -795,11 +795,24 @@ const UploadSection = () => {
 // ─── Main Documents Module ────────────────────────────────────
 export default function Documents() {
   const [section, setSection] = useState("overview");
+  const [intakeLog, setIntakeLog] = useState([]);
+  useEffect(() => {
+    if (!supabase || !AGENCY_ID) return;
+    // Pull from source_documents (Marlon's real doc intake log, 24 rows)
+    supabase.from("source_documents").select("*")
+      .eq("client_id", "762b2c76-1279-4bcf-a281-97e232bf3b81")
+      .order("created_at", { ascending: false })
+      .then(({ data }) => { if (data?.length) setIntakeLog(data.map(d => ({
+        id: d.id, file_name: d.filename || d.document_type, file_type: d.document_type,
+        processing_status: d.status, uploaded_at: d.created_at,
+        drive_url: d.google_drive_path, notes: d.processing_notes
+      }))); });
+  }, []);
   const { data: liveDocs, loading: docsLoading } = useSupabaseTable("documents", AGENCY_ID, { orderBy: "uploaded_at", ascending: false });
   const useMockData = import.meta.env.VITE_USE_MOCK_DATA === "true";
   const documents = (liveDocs && liveDocs.length > 0)
     ? liveDocs
-    : useMockData ? MOCK_DOCUMENTS : [];
+    : [];  // show empty state when no docs, not mock
 
   const sections = [
     { id:"overview", label:"Overview"   },
@@ -836,7 +849,7 @@ export default function Documents() {
       {/* Section Content */}
       {section === "overview" && <DocumentsOverview documents={documents} />}
       {section === "library"  && <DocumentLibrary  documents={documents} />}
-      {section === "intake"   && <IntakeLog         log={MOCK_INTAKE_LOG} />}
+      {section === "intake"   && <IntakeLog         log={intakeLog} />}
       {section === "upload"   && <UploadSection />}
     </div>
   );
