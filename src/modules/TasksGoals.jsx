@@ -685,7 +685,7 @@ export default function TasksGoals({ onNavigate }) {
   const [section,  setSection]  = useState("overview");
   const { data: liveTasks, loading: tasksLoading } = useSupabaseTable("tasks", AGENCY_ID, { orderBy: "due_date", ascending: true });
   const { data: liveGoals, loading: goalsLoading } = useSupabaseTable("goals", AGENCY_ID, { orderBy: "target_date", ascending: true });
-  const useMockData = import.meta.env.VITE_USE_MOCK_DATA !== "false";
+  const useMockData = import.meta.env.VITE_USE_MOCK_DATA === "true";
 
   const [tasks, setTasks] = useState(useMockData ? MOCK_TASKS : []);
   useEffect(() => {
