@@ -562,8 +562,21 @@ export default function PersistentMemory() {
   const [loading,         setLoading]         = useState(true);
 
   // Load from Supabase persistent_memory table
+  // Maps Marlon's memory_type values -> app category IDs
   useEffect(() => {
     if (!supabase || !AGENCY_ID) { setLoading(false); return; }
+    const typeToCategory = {
+      "learned_preference":  "agency_profile",
+      "system_config":       "agency_profile",
+      "operational_rule":    "business_rules",
+      "business_process":    "business_rules",
+      "business_context":    "agency_profile",
+      "compliance":          "compliance_notes",
+      "goal":                "goals",
+      "relationship":        "relationships",
+      "staff":               "staff",
+      "financial":           "financial_context",
+    };
     supabase
       .from("persistent_memory")
       .select("*")
@@ -574,8 +587,10 @@ export default function PersistentMemory() {
         if (!error && data && data.length > 0) {
           setMemories(data.map(m => ({
             ...m,
-            title: m.title || m.category || "Memory Entry",
-            category: m.category || "business_rules",
+            title: m.title && m.title !== m.category
+              ? m.title
+              : m.content?.split("\n")[0]?.substring(0, 60) || m.category || "Memory Entry",
+            category: typeToCategory[m.category] || "business_rules",
           })));
         }
         setLoading(false);
