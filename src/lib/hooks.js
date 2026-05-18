@@ -16,6 +16,7 @@ export function useSupabaseTable(tableName, agencyId, options = {}) {
     let cancelled = false;
 
     async function fetchData() {
+      if (!supabase) { setLoading(false); return; }
       setLoading(true);
       setError(null);
       try {
@@ -65,6 +66,7 @@ export function useSupabaseQuery(queryFn, deps = []) {
   useEffect(() => {
     let cancelled = false;
     async function run() {
+      if (!supabase) { setLoading(false); return; }
       setLoading(true);
       setError(null);
       try {
