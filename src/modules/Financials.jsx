@@ -86,9 +86,10 @@ function useFinancialsData() {
             .select("account_name, current_balance, updated_at, account_type, account_number_last4, credit_limit, available_credit, interest_rate, minimum_payment, payment_due_day, institution"),
 
           // GL
-          supabase.from("journal_lines")
-            .select(`
-              debit, credit, created_at,
+          supabase.from("gl_entries")
+            .select("id, entry_date, account_name, category, debit, credit, description, payee_name, source, year, month")
+            .eq("client_id", "762b2c76-1279-4bcf-a281-97e232bf3b81")
+            .order("entry_date", { ascending: false }).limit(100), credit, created_at,
               journal_entries!inner ( entry_date, reference_number, description, source ),
               chart_of_accounts!inner ( account_name )
             `)
@@ -167,7 +168,8 @@ function useFinancialsData() {
         const aippRaw = aippRow.data || null;
         const aipp = aippRaw ? {
           year:          aippRaw.program_year || currentYear,
-          target:        parseFloat(aippRaw.target_amount)        || 0,
+          target:        aippRaw.target_amount ? parseFloat(aippRaw.target_amount) : null,
+        targetLabel:   aippRaw.target_amount ? null : "Target TBD — contact your DSL",
           earned:        parseFloat(aippRaw.earned_ytd)           || 0,
           projected:     parseFloat(aippRaw.projected_full_year)  || 0,
           priorYear:     0, // schema does not track prior year; show 0 unless populated
@@ -241,14 +243,18 @@ function useFinancialsData() {
             institution: b.institution,
           })),
           creditAccounts,
+          // Map gl_entries (Marlon's real ledger, 1763 rows) to display format
           glEntries: (glRows.data || []).map(g => ({
-            date:        g.journal_entries?.entry_date,
-            ref:         g.journal_entries?.reference_number,
-            description: g.journal_entries?.description,
-            source:      g.journal_entries?.source,
-            account:     g.chart_of_accounts?.account_name,
+            date:        g.entry_date,
+            ref:         g.id?.substring(0,8),
+            description: g.description || g.payee_name || g.account_name,
+            source:      g.source || g.category,
+            account:     g.account_name,
             debit:       parseFloat(g.debit  || 0),
             credit:      parseFloat(g.credit || 0),
+            month:       g.month,
+            year:        g.year,
+            type:        g.category,
           })),
           payroll,
         });
