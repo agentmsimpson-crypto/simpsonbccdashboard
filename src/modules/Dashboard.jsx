@@ -142,55 +142,68 @@ const MonthlyCloseWidget = ({ data, onNavigate }) => {
     );
   }
 
-  const current = periods.find(p => !p.is_closed) || periods[0];
+  // Show all open months oldest first (April before May), then closed strip
+  const openMonths = periods.filter(p => !p.is_closed).sort((a,b) => 
+    (a.year*100+a.month) - (b.year*100+b.month));
   const closedMonths = periods.filter(p => p.is_closed).slice(0, 4);
-
-  const received = current.items.filter(i => i.received_at).length;
-  const total = current.items.length;
-  const allReceived = received === total && total > 0;
-  const outstandingItems = current.items.filter(i => !i.received_at);
-  const receivedItems = current.items.filter(i => i.received_at);
   const formatDate = (d) => d ? new Date(d).toLocaleDateString("en-US",{month:"short",day:"numeric"}) : "";
 
   return (
     <Card>
-      <SectionTitle icon="📅" title={`Monthly Close — ${monthLong(current.year, current.month)}`}
+      <SectionTitle icon="📅" title="Monthly Close"
         action={<button onClick={()=>onNavigate("documents")} style={{fontSize:11,color:T.blue,background:"none",border:"none",cursor:"pointer",fontWeight:600}}>View All →</button>}
       />
 
-      {/* Summary header */}
-      <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10}}>
-        <div style={{fontSize:13, color:T.slate700}}>
-          <span style={{fontWeight:700, color:allReceived?T.green:T.amber}}>{received}</span>
-          <span style={{color:T.slate400}}> / {total} documents received</span>
-        </div>
-        <Badge type={allReceived?"success":"warning"}>{allReceived?"Ready to Close":"In Progress"}</Badge>
-      </div>
-      <ProgressBar value={received} max={total} color={allReceived?T.green:T.amber} height={6} />
+      {/* One section per open month — oldest first (e.g. April before May) */}
+      {openMonths.map((mo, mi) => {
+        const received = mo.items.filter(i => i.received_at).length;
+        const total = mo.items.length;
+        const allReceived = received === total && total > 0;
+        const outstandingItems = mo.items.filter(i => !i.received_at);
+        const receivedItems   = mo.items.filter(i =>  i.received_at);
+        return (
+          <div key={mi} style={{marginBottom: mi < openMonths.length-1 ? 18 : 0}}>
+            {/* Month heading */}
+            <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6}}>
+              <div style={{fontSize:12, fontWeight:700, color:T.slate700}}>
+                {monthLong(mo.year, mo.month)}
+                {mi === 0 && !allReceived && <span style={{marginLeft:6, fontSize:10, color:T.red, fontWeight:600}}>● Open</span>}
+              </div>
+              <div style={{display:"flex", alignItems:"center", gap:8}}>
+                <span style={{fontSize:11, color:allReceived?T.green:T.amber, fontWeight:600}}>
+                  {received}/{total} received
+                </span>
+                <Badge type={allReceived?"success":"warning"}>{allReceived?"Ready":"In Progress"}</Badge>
+              </div>
+            </div>
+            <ProgressBar value={received} max={total} color={allReceived?T.green:T.amber} height={5} />
 
-      {/* Item-by-item checklist for current month */}
-      <div style={{marginTop:12, display:"flex", flexDirection:"column", gap:5}}>
-        {receivedItems.map((item, i) => (
-          <div key={`r${i}`} style={{display:"flex", alignItems:"center", justifyContent:"space-between", fontSize:11, padding:"5px 8px", borderRadius:6, background:T.greenLt}}>
-            <div style={{display:"flex", alignItems:"center", gap:7, minWidth:0, flex:1}}>
-              <span style={{color:T.green, fontSize:13, lineHeight:1}}>✓</span>
-              <span style={{color:T.slate800, fontWeight:500, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>{item.doc_label}</span>
+            {/* Checklist items */}
+            <div style={{marginTop:8, display:"flex", flexDirection:"column", gap:4}}>
+              {receivedItems.map((item, i) => (
+                <div key={`r${mi}${i}`} style={{display:"flex",alignItems:"center",justifyContent:"space-between",fontSize:11,padding:"4px 6px",borderRadius:5,background:T.greenLt}}>
+                  <div style={{display:"flex",alignItems:"center",gap:6,minWidth:0,flex:1}}>
+                    <span style={{color:T.green,fontSize:12}}>✓</span>
+                    <span style={{color:T.slate800,fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.doc_label}</span>
+                  </div>
+                  <span style={{color:T.slate500,fontSize:10,flexShrink:0,marginLeft:8}}>Rcvd {formatDate(item.received_at)}</span>
+                </div>
+              ))}
+              {outstandingItems.map((item, i) => (
+                <div key={`o${mi}${i}`} style={{display:"flex",alignItems:"center",justifyContent:"space-between",fontSize:11,padding:"4px 6px",borderRadius:5,background:item.expected_by && new Date(item.expected_by) < new Date() ? "#FEF2F2" : T.amberLt}}>
+                  <div style={{display:"flex",alignItems:"center",gap:6,minWidth:0,flex:1}}>
+                    <span style={{color:item.expected_by && new Date(item.expected_by) < new Date() ? T.red : T.amber,fontSize:12}}>○</span>
+                    <span style={{color:T.slate800,fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.doc_label}</span>
+                  </div>
+                  <span style={{color:T.amber,fontSize:10,fontWeight:600,flexShrink:0,marginLeft:8}}>
+                    {item.expected_by && new Date(item.expected_by) < new Date() ? "⚠ Overdue" : `Due ${formatDate(item.expected_by)}`}
+                  </span>
+                </div>
+              ))}
             </div>
-            <span style={{color:T.slate500, fontSize:10, flexShrink:0, marginLeft:8}}>{formatDate(item.received_at)}</span>
           </div>
-        ))}
-        {outstandingItems.map((item, i) => (
-          <div key={`o${i}`} style={{display:"flex", alignItems:"center", justifyContent:"space-between", fontSize:11, padding:"5px 8px", borderRadius:6, background:T.amberLt}}>
-            <div style={{display:"flex", alignItems:"center", gap:7, minWidth:0, flex:1}}>
-              <span style={{color:T.amber, fontSize:13, lineHeight:1}}>○</span>
-              <span style={{color:T.slate800, fontWeight:500, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>{item.doc_label}</span>
-            </div>
-            <span style={{color:T.amber, fontSize:10, fontWeight:600, flexShrink:0, marginLeft:8}}>
-              Expected {formatDate(item.expected_by)}
-            </span>
-          </div>
-        ))}
-      </div>
+        );
+      })}
 
       {/* Closed prior months — compact strip */}
       {closedMonths.length > 0 && (
