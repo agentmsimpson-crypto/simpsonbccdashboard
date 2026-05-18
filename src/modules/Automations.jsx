@@ -697,9 +697,23 @@ export default function Automations() {
     if (liveRecipes && liveRecipes.length > 0) setRecipes(liveRecipes);
   }, [liveRecipes]);
 
-  const runLog = (liveRunLog && liveRunLog.length > 0)
-    ? liveRunLog
-    : useMockData ? MOCK_RUN_LOG : [];
+  // Pull from automation_run_log first, fallback to legacy automation_log
+const [legacyRunLog, setLegacyRunLog] = useState([]);
+useEffect(() => {
+  if (!supabase || !AGENCY_ID) return;
+  if (liveRunLog && liveRunLog.length > 0) return; // already have live data
+  supabase.from("automation_log")
+    .select("id, automation_name, status, triggered_at, details")
+    .order("triggered_at", { ascending: false })
+    .limit(50)
+    .then(({ data }) => { if (data?.length) setLegacyRunLog(data.map(r => ({
+      id: r.id, recipe_name: r.automation_name, run_at: r.triggered_at,
+      status: r.status, records_processed: r.details?.saved || r.details?.archived || 0,
+      output_summary: r.details ? JSON.stringify(r.details).substring(0,100) : null
+    }))); });
+}, [liveRunLog]);
+const runLog = (liveRunLog && liveRunLog.length > 0) ? liveRunLog
+  : legacyRunLog.length > 0 ? legacyRunLog : [];
 
   const toggleRecipe = (id) => {
     setRecipes(prev => prev.map(r => r.id === id ? { ...r, is_active: !r.is_active } : r));
