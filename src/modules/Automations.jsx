@@ -711,7 +711,7 @@ export default function Automations() {
   const [section, setSection] = useState("overview");
   const { data: liveRecipes, loading: recipesLoading } = useSupabaseTable("automation_recipes", AGENCY_ID, { orderBy: "created_at", ascending: false });
   const { data: liveRunLog }   = useSupabaseTable("automation_run_log", AGENCY_ID, { orderBy: "run_at", ascending: false });
-  const useMockData = import.meta.env.VITE_USE_MOCK_DATA !== "false";
+  const useMockData = import.meta.env.VITE_USE_MOCK_DATA === "true";
 
   const [recipes, setRecipes] = useState(useMockData ? MOCK_RECIPES : []);
   useEffect(() => {
