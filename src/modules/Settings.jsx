@@ -888,8 +888,8 @@ export default function Settings() {
       {/* Section Content */}
       {section === "profile"     && <AgencyProfile      agency={agencyData || MOCK_AGENCY} />}
       {section === "team"        && <TeamAccess         users={usersData.length > 0 ? usersData : MOCK_USERS} />}
-      {section === "connections" && <ConnectedAccounts  connections={MOCK_CONNECTIONS} />}
-      {section === "config"      && <BCCConfiguration   config={MOCK_CONFIG} />}
+      {section === "connections" && <ConnectedAccounts  connections={connectionsData || MOCK_CONNECTIONS} />}
+      {section === "config"      && <BCCConfiguration   config={configData || MOCK_CONFIG} />}
       {section === "about"       && <About              agency={agencyData || MOCK_AGENCY} />}
     </div>
   );
