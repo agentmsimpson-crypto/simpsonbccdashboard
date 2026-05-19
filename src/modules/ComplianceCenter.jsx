@@ -1,5 +1,47 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { supabase, AGENCY_ID } from "../lib/supabase.js";
+import { useSupabaseTable } from "../lib/hooks.js";
+
+// ─── Helper: compute days remaining from a YYYY-MM-DD due_date ─
+const daysUntil = (dateStr) => {
+  if (!dateStr) return null;
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const target = new Date(dateStr);
+  return Math.ceil((target - today) / (1000*60*60*24));
+};
+
+// ─── Helper: normalize a compliance_calendar row from Supabase ─
+// Adds days_remaining (computed) and derives status from due_date.
+const normalizeCalendarRow = (row) => {
+  const days = daysUntil(row.due_date);
+  let status = row.status || "upcoming";
+  if (days !== null && days < 0) status = "overdue";
+  else if (days !== null && days <= 14) status = "due";
+  return {
+    id: row.id,
+    title: row.title,
+    description: row.description,
+    due_date: row.due_date,
+    status,
+    days_remaining: days ?? 999,
+    recurrence: row.recurrence || "once",
+    severity: row.severity || "warning",
+  };
+};
+
+// ─── Helper: normalize a compliance_log row from Supabase ─────
+const formatLogDate = (ts) => {
+  if (!ts) return "";
+  return new Date(ts).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});
+};
+const normalizeLogRow = (row) => ({
+  id: row.id,
+  date: formatLogDate(row.created_at || row.event_date),
+  event_type: row.event_type || "review",
+  description: row.description || row.notes || "(no description)",
+  created_by: row.created_by || row.reviewed_by || "System",
+});
 
 // ============================================================
 // BCC COMPLIANCE CENTER MODULE v1.0
@@ -217,7 +259,7 @@ const AskBtn = ({ context, size = "normal", demoMode = false }) => {
       <button
         onClick={open ? () => { setOpen(false); setTimeout(() => { setCopied(false); setOpened(false); }, 200); } : ask}
         style={{ display: "flex", alignItems: "center", gap: 5, background: open ? T.slate100 : T.blue, color: open ? T.blue : T.white, border: open ? `1px solid ${T.blue}` : "1px solid transparent", borderRadius: 7, padding: small ? "5px 10px" : "7px 13px", fontSize: small ? 10 : 11, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}
-      >\u26a1 Ask Claude</button>
+      >⚡ Ask Claude</button>
       {open && (
         <div role="dialog" aria-label="Ask Claude" style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, zIndex: 60, width: 300, background: T.white, border: `1px solid ${T.slate100}`, borderRadius: 12, boxShadow: "0 12px 32px rgba(15,23,42,0.16)", padding: 14, textAlign: "left" }}>
           <div style={{ fontSize: 12, fontWeight: 600, color: "#16A34A", marginBottom: 4 }}>
@@ -263,9 +305,18 @@ const TabBar = ({ tabs, active, onChange }) => (
 
 // ─── Section: Compliance Dashboard ───────────────────────────
 const ComplianceDashboard = () => {
-  const critical = MOCK_RULES.filter(r => r.severity === "critical").length;
-  const dueItems = MOCK_CALENDAR.filter(c => c.status === "due" || c.days_remaining <= 14).length;
-  const overdueItems = MOCK_CALENDAR.filter(c => c.status === "overdue").length;
+  const { data: rulesRaw } = useSupabaseTable("compliance_rules", AGENCY_ID, { orderBy: "rule_code", ascending: true });
+  const { data: calRaw }   = useSupabaseTable("compliance_calendar", AGENCY_ID, { orderBy: "due_date", ascending: true });
+  const { data: logsRaw }  = useSupabaseTable("compliance_log", AGENCY_ID, { orderBy: "created_at", ascending: false });
+
+  const liveRules = (rulesRaw && rulesRaw.length > 0) ? rulesRaw : MOCK_RULES;
+  const liveCal   = (calRaw && calRaw.length > 0)     ? calRaw.map(normalizeCalendarRow) : MOCK_CALENDAR;
+  const liveLogs  = (logsRaw && logsRaw.length > 0)   ? logsRaw.map(normalizeLogRow)     : [];
+
+  const critical     = liveRules.filter(r => r.severity === "critical").length;
+  const dueItems     = liveCal.filter(c => c.status === "due" || (c.days_remaining ?? 999) <= 14).length;
+  const overdueItems = liveCal.filter(c => c.status === "overdue").length;
+  const totalRules   = liveRules.length;
 
   return (
     <div>
@@ -275,7 +326,7 @@ const ComplianceDashboard = () => {
           { label:"Critical Rules",     value: critical,     color: T.red,   border: T.red   },
           { label:"Due Within 14 Days", value: dueItems,     color: T.amber, border: T.amber },
           { label:"Overdue Items",      value: overdueItems, color: overdueItems>0?T.red:T.green, border: overdueItems>0?T.red:T.green },
-          { label:"Rules in Library",   value: 57,           color: T.blue,  border: T.blue  },
+          { label:"Rules in Library",   value: totalRules,   color: T.blue,  border: T.blue  },
         ].map((k,i) => (
           <div key={i} style={{ background:T.white, border:`1px solid ${T.slate200}`, borderTop:`3px solid ${k.border}`, borderRadius:12, padding:"14px 16px" }}>
             <div style={{ fontSize:11, color:T.slate500, fontWeight:500, marginBottom:6 }}>{k.label}</div>
@@ -291,7 +342,7 @@ const ComplianceDashboard = () => {
             <span style={{ fontSize:13, fontWeight:600, color:T.slate800 }}>Upcoming deadlines</span>
             <AskBtn size="small" context="Here are my upcoming compliance deadlines. Help me prioritize what needs my immediate attention and what I should plan for in the next 90 days." />
           </div>
-          {MOCK_CALENDAR.slice(0,6).map((item,i) => {
+          {liveCal.slice(0,6).map((item,i) => {
             const sc = statusConfig(item.status);
             const urgent = item.days_remaining <= 14;
             return (
@@ -336,10 +387,14 @@ const ComplianceDashboard = () => {
       {/* Recent Audit Log */}
       <Card style={{ marginTop:12 }}>
         <div style={{ fontSize:13, fontWeight:600, color:T.slate800, marginBottom:12 }}>Recent compliance activity</div>
-        {MOCK_AUDIT_LOG.slice(0,4).map((log,i) => {
+        {liveLogs.length === 0 ? (
+          <div style={{ fontSize:12, color:T.slate500, padding:"16px 4px", textAlign:"center" }}>
+            No compliance activity logged yet. Claude will record reviews, push-backs, and completions here as they happen.
+          </div>
+        ) : liveLogs.slice(0,4).map((log,i) => {
           const ec = eventConfig(log.event_type);
           return (
-            <div key={i} style={{ display:"flex", gap:10, alignItems:"flex-start", padding:"8px 0", borderBottom:i<3?`1px solid ${T.slate100}`:"none" }}>
+            <div key={i} style={{ display:"flex", gap:10, alignItems:"flex-start", padding:"8px 0", borderBottom:i<Math.min(liveLogs.length,4)-1?`1px solid ${T.slate100}`:"none" }}>
               <span style={{ fontSize:16, flexShrink:0 }}>{ec.icon}</span>
               <div style={{ flex:1 }}>
                 <div style={{ fontSize:12, color:T.slate800 }}>{log.description}</div>
@@ -551,10 +606,12 @@ const PrePostChecklist = () => {
 // ─── Section: Compliance Calendar ─────────────────────────────
 const ComplianceCalendar = () => {
   const [filter, setFilter] = useState("all");
+  const { data: calRaw, loading } = useSupabaseTable("compliance_calendar", AGENCY_ID, { orderBy: "due_date", ascending: true });
+  const liveCal = (calRaw && calRaw.length > 0) ? calRaw.map(normalizeCalendarRow) : MOCK_CALENDAR;
 
-  const filtered = MOCK_CALENDAR.filter(item => {
+  const filtered = liveCal.filter(item => {
     if (filter === "all") return true;
-    if (filter === "due") return item.days_remaining <= 30;
+    if (filter === "due") return (item.days_remaining ?? 999) <= 30;
     if (filter === "annual") return item.recurrence === "annual";
     if (filter === "monthly") return item.recurrence === "monthly";
     return true;
@@ -611,16 +668,21 @@ const ComplianceCalendar = () => {
 // ─── Section: Audit Log ───────────────────────────────────────
 const AuditLog = () => {
   const [newNote, setNewNote] = useState("");
-  const [logs, setLogs] = useState(MOCK_AUDIT_LOG);
+  const { data: logsRaw } = useSupabaseTable("compliance_log", AGENCY_ID, { orderBy: "created_at", ascending: false });
+  const [localLogs, setLocalLogs] = useState([]);
+
+  // Merge live (from Supabase) + locally-added entries (not yet persisted)
+  const liveLogs = (logsRaw && logsRaw.length > 0) ? logsRaw.map(normalizeLogRow) : [];
+  const logs = [...localLogs, ...liveLogs];
 
   const addLog = () => {
     if (!newNote.trim()) return;
-    setLogs(prev => [{
+    setLocalLogs(prev => [{
       id: `a${Date.now()}`,
       date: new Date().toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}),
       event_type: "review",
       description: newNote.trim(),
-      created_by: "Jane Smith",
+      created_by: "Owner",
     }, ...prev]);
     setNewNote("");
   };
@@ -650,7 +712,11 @@ const AuditLog = () => {
 
       {/* Log Entries */}
       <div style={{ display:"flex", flexDirection:"column", gap:0 }}>
-        {logs.map((log,i) => {
+        {logs.length === 0 ? (
+          <div style={{ fontSize:12, color:T.slate500, padding:"24px 4px", textAlign:"center" }}>
+            No compliance activity logged yet. Use the box above to record a review, or Claude will log activities here as they happen.
+          </div>
+        ) : logs.map((log,i) => {
           const ec = eventConfig(log.event_type);
           return (
             <div key={log.id} style={{ display:"flex", gap:12, padding:"10px 0", borderBottom:i<logs.length-1?`1px solid ${T.slate100}`:"none" }}>
@@ -674,6 +740,8 @@ const AuditLog = () => {
 // ─── Main Compliance Center Module ───────────────────────────
 export default function ComplianceCenter() {
   const [section, setSection] = useState("dashboard");
+  const { data: rulesForCount } = useSupabaseTable("compliance_rules", AGENCY_ID, { orderBy: "rule_code", ascending: true });
+  const ruleCount = (rulesForCount && rulesForCount.length > 0) ? rulesForCount.length : MOCK_RULES.length;
 
   // ── Add/Edit Modal State ────────────────────────────────────
   const [showAddRule, setShowAddRule] = useState(false);
@@ -697,11 +765,11 @@ export default function ComplianceCenter() {
 
 
   const sections = [
-    { id:"dashboard", label:"Dashboard"         },
-    { id:"rules",     label:"Rules Library (57)"},
-    { id:"checklist", label:"Pre-Post Checklist"},
-    { id:"calendar",  label:"Calendar"          },
-    { id:"log",       label:"Audit Log"         },
+    { id:"dashboard", label:"Dashboard"                    },
+    { id:"rules",     label:`Rules Library (${ruleCount})` },
+    { id:"checklist", label:"Pre-Post Checklist"           },
+    { id:"calendar",  label:"Calendar"                     },
+    { id:"log",       label:"Audit Log"                    },
   ];
 
   return (
@@ -711,7 +779,7 @@ export default function ComplianceCenter() {
         <div>
           <div style={{ fontSize:20, fontWeight:700, color:T.slate900, letterSpacing:"-0.02em" }}>Compliance Center</div>
           <div style={{ fontSize:12, color:T.slate500, marginTop:3 }}>
-            57 rules · AA05 contract-based · Claude enforces these in every conversation
+            {ruleCount} rules · AA05 contract-based · Claude enforces these in every conversation
           </div>
         </div>
         <AskBtn context="I am reviewing my compliance center. I need you to act as my compliance advisor. What are the most critical compliance items I should be focused on right now as a State Farm agent? What are the most common compliance mistakes agents make?" />
