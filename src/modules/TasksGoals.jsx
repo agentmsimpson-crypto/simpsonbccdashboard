@@ -176,11 +176,17 @@ const MOCK_GOALS = [
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────
-const pct = (curr, target) => Math.min(100, Math.round((curr / target) * 100));
+const pct = (curr, target) => {
+  if (curr == null || target == null || target === 0) return 0;
+  return Math.min(100, Math.round((curr / target) * 100));
+};
 const fmt = (n, unit) => {
-  if (unit === "dollars") return "$" + n.toLocaleString();
+  if (n == null) return "—";
+  if (unit === "dollars" || unit === "dollars/month") return "$" + Number(n).toLocaleString();
   if (unit === "percentage") return n + "%";
-  return n.toString();
+  if (unit === "milestone" || unit === "decision") return n === 1 ? "Complete" : "Pending";
+  if (unit === "tiers_complete") return n + " tiers";
+  return String(n);
 };
 const isOverdue = (due) => {
   const dueDate = new Date(due + ", 2026");
